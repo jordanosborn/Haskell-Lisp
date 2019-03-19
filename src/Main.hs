@@ -2,6 +2,8 @@ module Main where
 import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import Control.Monad
+import Utilities.Number
+import           Numeric
 
 
 data LispVal = Atom String
@@ -10,6 +12,8 @@ data LispVal = Atom String
     | Number Integer
     | String String
     | Bool Bool
+    | Character Char
+    | Float Double
 
 symbol :: Parser Char
 symbol = oneOf "!$%&|*+-/:<=>?@^_~"
@@ -28,6 +32,15 @@ escapedChars = do
         'r' -> '\r'
         't' -> '\t'
 
+parseCharacter :: Parser LispVal
+parseCharacter = do
+    try $ string "#\\"
+    value <- try (string "newline" <|> string "space")
+        <|> do { x <- anyChar; notFollowedBy alphaNum; return [x]}
+    return $ Character $ case value of
+        "space" -> ' '
+        "newline" -> '\n'
+        _ -> value !! 0
 
 parseBool :: Parser LispVal
 parseBool = do
@@ -51,14 +64,50 @@ parseAtom = do
         "#f" -> Bool False
         _ -> Atom atom
 
+parseDecimal1 :: Parser LispVal
+parseDecimal1 = many1 digit >>= return . Number . read
+
+parseDecimal2 :: Parser LispVal
+parseDecimal2 = do
+    try $ string "#d"
+    x <- many1 digit
+    (return . Number . read) x
+
+parseHex :: Parser LispVal
+parseHex = do
+    try $ string "#x"
+    x <- many1 hexDigit
+    return $ Number (hex2dig x)
+
+parseOct :: Parser LispVal
+parseOct = do
+    try $ string "#o"
+    x <- many1 octDigit
+    return $ Number (oct2dig x)
+
+parseBin :: Parser LispVal
+parseBin = do
+    try $ string "#o"
+    x <- many1 (oneOf "10")
+    return $ Number (bin2dig x)
+
 parseNumber :: Parser LispVal
-parseNumber = many1 digit >>= return . Number . read
+parseNumber = parseDecimal1 <|> parseDecimal2 <|> parseHex <|> parseOct <|> parseBin
+
+parseFloat :: Parser LispVal
+parseFloat = do
+    x <- many1 digit
+    char '.'
+    y <- many1 digit
+    return $ Float (fst . head $ readFloat (x ++ "." ++ y))
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
     <|> parseString
-    <|> parseNumber
-    <|> parseBool
+    <|> try parseFloat
+    <|> try parseNumber
+    <|> try parseBool
+    <|> try parseCharacter
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
