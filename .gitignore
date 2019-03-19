@@ -1,1 +1,2 @@
-\n./dist/*
+dist/*
+dist/cabal-config-flags

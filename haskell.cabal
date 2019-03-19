@@ -3,7 +3,7 @@ name: haskell
 version: 0.1.0.0
 license: MIT
 license-file: LICENSE
-maintainer: jordanosborn0@gmail.com
+maintainer: jordan@osborn.dev
 author: Jordan Osborn
 build-type: Simple
 extra-source-files:
