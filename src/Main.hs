@@ -3,17 +3,10 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import Control.Monad
 import Utilities.Number
-import           Numeric
-
-
-data LispVal = Atom String
-    | List [LispVal]
-    | DottedList [LispVal] LispVal
-    | Number Integer
-    | String String
-    | Bool Bool
-    | Character Char
-    | Float Double
+import Numeric
+import Data.Ratio
+import Data.Complex
+import Utilities.Types
 
 symbol :: Parser Char
 symbol = oneOf "!$%&|*+-/:<=>?@^_~"
@@ -40,7 +33,7 @@ parseCharacter = do
     return $ Character $ case value of
         "space" -> ' '
         "newline" -> '\n'
-        _ -> value !! 0
+        _ -> head value
 
 parseBool :: Parser LispVal
 parseBool = do
@@ -65,7 +58,7 @@ parseAtom = do
         _ -> Atom atom
 
 parseDecimal1 :: Parser LispVal
-parseDecimal1 = many1 digit >>= return . Number . read
+parseDecimal1 = Number . read <$> many1 digit
 
 parseDecimal2 :: Parser LispVal
 parseDecimal2 = do
@@ -101,10 +94,27 @@ parseFloat = do
     y <- many1 digit
     return $ Float (fst . head $ readFloat (x ++ "." ++ y))
 
+parseRatio :: Parser LispVal
+parseRatio = do
+    x <- many1 digit
+    char '/'
+    y <- many1 digit
+    return $ Ratio (read x % read y)
+
+parseComplex :: Parser LispVal
+parseComplex = do
+    x <- try parseFloat <|> parseDecimal1 <|> parseDecimal2
+    char '+'
+    y <- try parseFloat <|> parseDecimal1 <|> parseDecimal2
+    char 'i'
+    return $ Complex (toDouble x :+ toDouble y)
+
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
     <|> parseString
+    <|> try parseComplex
     <|> try parseFloat
+    <|> try parseRatio
     <|> try parseNumber
     <|> try parseBool
     <|> try parseCharacter
