@@ -42,7 +42,7 @@ unpackNum notNum = throwError $ TypeMismatch "number" notNum
 
 
 symbol2string, string2symbol :: LispVal -> LispVal
-symbol2String (Atom s) = String s
+symbol2string (Atom s) = String s
 symbol2string _ = String ""
 string2symbol (String s) = Atom s
 string2symbol _ = Atom ""
@@ -74,6 +74,7 @@ eval :: LispVal -> ThrowsError LispVal
 eval val@(String _) = return val
 eval val@(Number _) = return val
 eval val@(Bool _) = return val
+eval val@(Atom _) = return val
 eval (List [Atom "quote", val]) = return val
 eval (List (Atom func : args)) = mapM eval args >>= apply func
 eval badForm = throwError $ BadSpecialForm "Unrecognised special form" badForm

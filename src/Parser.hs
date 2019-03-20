@@ -56,7 +56,7 @@ parseAtom = do
     return $ case atom of
         "#t" -> Bool True
         "#f" -> Bool False
-        _ -> Atom atom
+        v -> Atom v
 
 parseDecimal1 :: Parser LispVal
 parseDecimal1 = Number . read <$> many1 digit
