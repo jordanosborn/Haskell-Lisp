@@ -1,3 +1,5 @@
 dist/*
 dist/cabal-config-flags
 main
+.idea/*
+
