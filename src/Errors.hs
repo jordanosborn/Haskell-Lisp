@@ -1,8 +1,8 @@
 module Errors where
-import Evaluator
 import Utilities.Types
 import Control.Monad.Except
 import Text.ParserCombinators.Parsec hiding (spaces)
+import Utilities.Tools
 
 data LispError = NumArgs Integer [LispVal]
     | TypeMismatch String LispVal
@@ -26,3 +26,6 @@ instance Show LispError where show = showError
 type ThrowsError = Either LispError
 
 trapError action = catchError action (return . show)
+
+extractValue :: ThrowsError a -> a
+extractValue (Right val) = val

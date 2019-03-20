@@ -1,23 +1,12 @@
 module Evaluator where
 import Utilities.Types
+import Errors
+import Utilities.Tools
+import Control.Monad.Except
 
-unwordsList :: [LispVal] -> String
-unwordsList = unwords . map showVal
-
-showVal :: LispVal -> String
-showVal val = case val of
-    String contents -> "\"" ++ contents ++ "\""
-    Atom name -> name
-    Number contents -> show contents
-    Bool True -> "#t"
-    Bool False -> "#f"
-    List contents -> "(" ++ unwordsList contents ++ ")"
-    DottedList head tail -> "(" ++ unwordsList head ++ " . " ++ showVal tail ++ ")"
-
-instance Show LispVal where show = showVal
-
-unaryOp :: (LispVal -> LispVal) -> [LispVal] -> LispVal
-unaryOp f [v] = f v
+unaryOp :: (LispVal -> LispVal) -> [LispVal] -> ThrowsError LispVal
+unaryOp f [v] = Right $ f v
+unaryOp f x = throwError $ NumArgs 1 x
 
 symbolp, numberp, stringp, boolp, listp :: LispVal -> LispVal
 symbolp (Atom _) = Bool True
@@ -36,12 +25,21 @@ listp (List _) = Bool True
 listp (DottedList _ _) = Bool True
 listp _ = Bool False
 
-numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
-numericBinop op params = Number $ foldl1 op $ map unpackNum params
+numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
+numericBinop op [] = throwError $ NumArgs 2 []
+numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
+numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op
 
-unpackNum :: LispVal -> Integer
-unpackNum (Number n) = n
-unpackNum _ = 0
+unpackNum :: LispVal -> ThrowsError Integer
+unpackNum (Number n) = return n
+unpackNum (String n) = let parsed = reads n in
+    if null parsed then
+        throwError $ TypeMismatch "number" $ String n
+    else
+        return $ fst $ (head parsed)
+unpackNum (List [n]) = unpackNum n
+unpackNum notNum = throwError $ TypeMismatch "number" notNum
+
 
 symbol2string, string2symbol :: LispVal -> LispVal
 symbol2String (Atom s) = String s
@@ -49,7 +47,7 @@ symbol2string _ = String ""
 string2symbol (String s) = Atom s
 string2symbol _ = Atom ""
 
-primitives :: [(String, [LispVal] -> LispVal)]
+primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
 primitives = [
     ("+", numericBinop (+)),
     ("-", numericBinop (-)),
@@ -67,13 +65,15 @@ primitives = [
     ("string->symbol", unaryOp string2symbol)]
 
 
-apply :: String -> [LispVal] -> LispVal
-apply func args = maybe (Bool False) ($ args) $ lookup func primitives
+apply :: String -> [LispVal] -> ThrowsError LispVal
+apply func args = maybe (throwError $ NotFunction
+    "Unrecognised primitive function args" func)
+    ($ args) (lookup func primitives)
 
-eval :: LispVal -> LispVal
-eval val@(String _) = val
-eval val@(Number _) = val
-eval val@(Bool _) = val
-eval val@(Atom _) = val
-eval (List [Atom "quote", val]) = val
-eval (List (Atom func : args)) = apply func $ map eval args
+eval :: LispVal -> ThrowsError LispVal
+eval val@(String _) = return val
+eval val@(Number _) = return val
+eval val@(Bool _) = return val
+eval (List [Atom "quote", val]) = return val
+eval (List (Atom func : args)) = mapM eval args >>= apply func
+eval badForm = throwError $ BadSpecialForm "Unrecognised special form" badForm

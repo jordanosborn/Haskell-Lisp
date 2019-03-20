@@ -16,6 +16,7 @@ executable haskell
     other-modules:
         Utilities.Number
         Utilities.Types
+        Utilities.Tools
         Parser
         Evaluator
         Errors

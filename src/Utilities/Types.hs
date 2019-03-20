@@ -2,6 +2,7 @@ module Utilities.Types where
 import Data.Complex
 import Data.Ratio
 import Data.Array
+import Utilities.Tools
 
 data LispVal = Atom String
     | List [LispVal]
@@ -14,3 +15,19 @@ data LispVal = Atom String
     | Ratio Rational
     | Complex (Complex Double)
     | Vector (Array Int LispVal)
+
+
+showVal :: LispVal -> String
+showVal val = case val of
+    String contents -> "\"" ++ contents ++ "\""
+    Atom name -> name
+    Number contents -> show contents
+    Bool True -> "#t"
+    Bool False -> "#f"
+    List contents -> "(" ++ unwordsList contents ++ ")"
+    DottedList head tail -> "(" ++ unwordsList head ++ " . " ++ showVal tail ++ ")"
+
+instance Show LispVal where show = showVal
+
+unwordsList :: [LispVal] -> String
+unwordsList = unwords . map showVal
