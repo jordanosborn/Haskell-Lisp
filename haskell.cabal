@@ -17,6 +17,7 @@ executable haskell
         Utilities.Number
         Utilities.Types
         Parser
+        Evaluator
     build-depends:
         base >=4.11 && <4.12,
         parsec -any,
