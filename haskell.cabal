@@ -18,7 +18,9 @@ executable haskell
         Utilities.Types
         Parser
         Evaluator
+        Errors
     build-depends:
         base >=4.11 && <4.12,
         parsec -any,
-        array -any
+        array -any,
+        mtl -any
