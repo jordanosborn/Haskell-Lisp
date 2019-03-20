@@ -1,5 +1,5 @@
 module Parser where
-import Text.ParserCombinators.Parsec hiding (spaces)
+import Text.ParserCombinators.Parsec
 import System.Environment
 import Control.Monad
 import Utilities.Number
@@ -12,8 +12,8 @@ import Utilities.Types
 symbol :: Parser Char
 symbol = oneOf "!$%&|*+-/:<=>?@^_~"
 
-spaces :: Parser ()
-spaces = skipMany1 space
+spaces1 :: Parser ()
+spaces1 = skipMany1 space
 
 escapedChars :: Parser Char
 escapedChars = do
@@ -110,14 +110,25 @@ parseComplex = do
     char 'i'
     return $ Complex (toDouble x :+ toDouble y)
 
-parseList :: Parser LispVal
-parseList = liftM List $ sepBy parseExpr spaces
+-- parseList :: Parser LispVal
+-- parseList = liftM List $ sepBy parseExpr spaces1
 
-parseDottedList :: Parser LispVal
-parseDottedList = do
-    head <- endBy parseExpr spaces
-    tail <- char '.' >> spaces >> parseExpr
-    return $ DottedList head tail
+-- parseDottedList :: Parser LispVal
+-- parseDottedList = do
+--     head <- endBy parseExpr spaces1
+--     tail <- char '.' >> spaces1 >> parseExpr
+--     return $ DottedList head tail
+
+parseList :: Parser LispVal
+parseList = do
+    char '(' >> spaces
+    head <- parseExpr `sepEndBy` spaces1
+    do
+        char '.' >> spaces1
+        tail <- parseExpr
+        spaces >> char ')'
+        return $ DottedList head tail
+        <|> (spaces >> char ')' >> (return $ List head))
 
 parseQuoted :: Parser LispVal
 parseQuoted = do
@@ -139,7 +150,7 @@ parseUnQuote = do
 
 parseVector :: Parser LispVal
 parseVector = do
-    arrayValues <- sepBy parseExpr spaces
+    arrayValues <- sepBy parseExpr spaces1
     return $ Vector (listArray (0, (length arrayValues - 1)) arrayValues)
 
 parseExpr :: Parser LispVal
@@ -150,11 +161,12 @@ parseExpr = parseAtom
     <|> try parseRatio
     <|> try parseNumber
     <|> parseQuoted
-    <|> do
-        char '('
-        x <- try parseList <|> parseDottedList
+    <|> try (do
+        string "#("
+        x <- parseVector
         char ')'
-        return x
+        return x)
+    <|> parseList
     <|> try parseBool
     <|> try parseCharacter
     <|> parseQuasiQuoted
