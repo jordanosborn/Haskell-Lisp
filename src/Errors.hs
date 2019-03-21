@@ -2,7 +2,6 @@ module Errors where
 import Utilities.Types
 import Control.Monad.Except
 import Text.ParserCombinators.Parsec hiding (spaces)
-import Utilities.Tools
 
 data LispError = NumArgs Integer [LispVal]
     | TypeMismatch String LispVal

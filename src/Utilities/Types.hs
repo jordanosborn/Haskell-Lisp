@@ -2,7 +2,6 @@ module Utilities.Types where
 import Data.Complex
 import Data.Ratio
 import Data.Array
-import Utilities.Tools
 
 data LispVal = Atom String
     | List [LispVal]
