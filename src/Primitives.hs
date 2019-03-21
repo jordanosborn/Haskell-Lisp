@@ -78,11 +78,7 @@ eqv value = case value of
     [String arg1, String arg2] -> return $ Bool $ arg1 == arg2
     [Atom arg1, Atom arg2] -> return $ Bool $ arg1 == arg2
     [DottedList xs x, DottedList ys y] -> eqv [List $ xs ++ [x], List $ ys ++ [y]]
-    [List arg1, List arg2] -> return $ Bool $ (length arg1 == length arg2) &&
-        (all eqvPair $ zip arg1 arg2) where
-            eqvPair (x1, x2) = case eqv [x1, x2] of
-                Left err -> False
-                Right (Bool val) -> val
+    [l1@(List arg1), l2@(List arg2)] -> eqvList eqv [l1, l2]
     [_, _] -> return $ Bool False
     badArgList -> throwError $ NumArgs 2 badArgList
 
@@ -97,6 +93,8 @@ unpackEquals arg1 arg2 (AnyUnpacker unpacker) = do
 
 equal :: [LispVal] -> ThrowsError LispVal
 equal value = case value of
+    [l1@(List arg1), l2@(List arg2)] -> eqvList equal [l1, l2]
+    [DottedList xs x, DottedList ys y] -> equal [List $ xs ++ [x], List $ ys ++ [y]]
     [arg1, arg2] -> do
         primitiveEquals <- liftM or $ mapM (unpackEquals arg1 arg2)
             [AnyUnpacker unpackNum, AnyUnpacker unpackStr, AnyUnpacker unpackBool]
