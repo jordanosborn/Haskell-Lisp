@@ -1,3 +1,4 @@
+{-# LANGUAGE ExistentialQuantification #-}
 module Primitives where
 import Utilities.Types
 import Errors
@@ -62,6 +63,47 @@ cdr value = case value of
     [badArg] -> throwError $ TypeMismatch "pair" badArg
     badArgList -> throwError $ NumArgs 1 badArgList
 
+cons :: [LispVal] -> ThrowsError LispVal
+cons value = case value of
+    [x1, List []] -> return $ List [x1]
+    [x, List xs] -> return $ List $ x : xs
+    [x, DottedList xs xlast] -> return $ DottedList (x : xs) xlast
+    [x1, x2] -> return $ DottedList [x1] x2
+    badArgList -> throwError $ NumArgs 2 badArgList
+
+eqv :: [LispVal] -> ThrowsError LispVal
+eqv value = case value of
+    [Bool arg1, Bool arg2] -> return $ Bool $ arg1 == arg2
+    [Number arg1, Number arg2] -> return $ Bool $ arg1 == arg2
+    [String arg1, String arg2] -> return $ Bool $ arg1 == arg2
+    [Atom arg1, Atom arg2] -> return $ Bool $ arg1 == arg2
+    [DottedList xs x, DottedList ys y] -> eqv [List $ xs ++ [x], List $ ys ++ [y]]
+    [List arg1, List arg2] -> return $ Bool $ (length arg1 == length arg2) &&
+        (all eqvPair $ zip arg1 arg2) where
+            eqvPair (x1, x2) = case eqv [x1, x2] of
+                Left err -> False
+                Right (Bool val) -> val
+    [_, _] -> return $ Bool False
+    badArgList -> throwError $ NumArgs 2 badArgList
+
+data Unpacker = forall a. Eq a => AnyUnpacker (LispVal -> ThrowsError a)
+
+unpackEquals :: LispVal -> LispVal -> Unpacker -> ThrowsError Bool
+unpackEquals arg1 arg2 (AnyUnpacker unpacker) = do
+    unpacked1 <- unpacker arg1
+    unpacked2 <- unpacker arg2
+    return $ unpacked1 == unpacked2
+    `catchError` (const $ return False)
+
+equal :: [LispVal] -> ThrowsError LispVal
+equal value = case value of
+    [arg1, arg2] -> do
+        primitiveEquals <- liftM or $ mapM (unpackEquals arg1 arg2)
+            [AnyUnpacker unpackNum, AnyUnpacker unpackStr, AnyUnpacker unpackBool]
+        eqvEquals <- eqv [arg1, arg2]
+        return $ Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
+    badArgList -> throwError $ NumArgs 2 badArgList
+
 primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
 primitives = [
     ("+", numericBinop (+)),
@@ -90,4 +132,10 @@ primitives = [
     ("string<?", strBoolBinop (<)),
     ("string>?", strBoolBinop (>)),
     ("string<=?", strBoolBinop (<=)),
-    ("string>=?", strBoolBinop (>=))]
+    ("string>=?", strBoolBinop (>=)),
+    ("car", car),
+    ("cdr", cdr),
+    ("cons", cons),
+    ("eq?", eqv),
+    ("eqv?", eqv),
+    ("equal?", equal)]
