@@ -102,6 +102,22 @@ equal value = case value of
         return $ Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
     badArgList -> throwError $ NumArgs 2 badArgList
 
+stringLen :: [LispVal] -> ThrowsError LispVal
+stringLen value = case value of
+    [String s] -> Right $ Number $ fromIntegral $ length s
+    [notString] -> throwError $ TypeMismatch "string" notString
+    badArgList -> throwError $ NumArgs 1 badArgList
+
+stringRef :: [LispVal] -> ThrowsError LispVal
+stringRef value = case value of
+    [String s, Number k]
+        | length s < k' + 1 -> throwError $ Default "Out of bound error"
+        | otherwise -> Right $ String $ [s !! k'] where k' = fromIntegral k
+    [String s, notNum] -> throwError $ TypeMismatch "number" notNum
+    [notString, _] -> throwError $ TypeMismatch "string" notString
+    badArgList -> throwError $ NumArgs 2 badArgList
+
+
 primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
 primitives = [
     ("+", numericBinop (+)),
@@ -136,4 +152,6 @@ primitives = [
     ("cons", cons),
     ("eq?", eqv),
     ("eqv?", eqv),
-    ("equal?", equal)]
+    ("equal?", equal),
+    ("string-length", stringLen),
+    ("string-ref", stringRef)]
