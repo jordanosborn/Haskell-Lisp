@@ -27,7 +27,7 @@ showVal val = case val of
     DottedList head tail -> "(" ++ unwordsList head ++ " . " ++ showVal tail ++ ")"
 
 instance Show LispVal where show = showVal
-instance Eq LispVal
+instance Eq LispVal where (==) = (==)
 
 
 unwordsList :: [LispVal] -> String
