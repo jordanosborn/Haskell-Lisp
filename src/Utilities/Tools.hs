@@ -10,7 +10,7 @@ unpackNum value = case value of
         if null parsed then
             throwError $ TypeMismatch "number" $ String n
         else
-            return $ fst $ (head parsed)
+            return $ fst $ head parsed
     List [n] -> unpackNum n
     notNum -> throwError $ TypeMismatch "number" notNum
 
@@ -28,7 +28,7 @@ unpackBool value = case value of
 
 eqvList :: ([LispVal] -> ThrowsError LispVal) -> [LispVal] -> ThrowsError LispVal
 eqvList eqvFunc [List arg1, List arg2] = return $ Bool $
-    (length arg1 == length arg2) && (all eqvPair $ zip arg1 arg2) where
+    (length arg1 == length arg2) && all eqvPair (zip arg1 arg2) where
         eqvPair (x1, x2) = case eqvFunc [x1, x2] of
             Left err -> False
             Right (Bool val) -> val
