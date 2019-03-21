@@ -4,21 +4,24 @@ import Control.Monad.Except
 import Errors
 
 unpackNum :: LispVal -> ThrowsError Integer
-unpackNum (Number n) = return n
-unpackNum (String n) = let parsed = reads n in
-    if null parsed then
-        throwError $ TypeMismatch "number" $ String n
-    else
-        return $ fst $ (head parsed)
-unpackNum (List [n]) = unpackNum n
-unpackNum notNum = throwError $ TypeMismatch "number" notNum
+unpackNum value = case value of
+    Number n -> return n
+    String n -> let parsed = reads n in
+        if null parsed then
+            throwError $ TypeMismatch "number" $ String n
+        else
+            return $ fst $ (head parsed)
+    List [n] -> unpackNum n
+    notNum -> throwError $ TypeMismatch "number" notNum
 
 unpackStr :: LispVal -> ThrowsError String
-unpackStr (String s) = return s
-unpackStr (Number s) = return $ show s
-unpackStr (Bool s) = return $ show s
-unpackStr notString = throwError $ TypeMismatch "string" notString
+unpackStr value = case value of
+    String s -> return s
+    Number s -> return $ show s
+    Bool s  -> return $ show s
+    notString -> throwError $ TypeMismatch "string" notString
 
 unpackBool :: LispVal -> ThrowsError Bool
-unpackBool (Bool b) = return b
-unpackBool notBool = throwError $ TypeMismatch "boolean" notBool
+unpackBool value = case value of
+    Bool b -> return b
+    notBool -> throwError $ TypeMismatch "boolean" notBool
