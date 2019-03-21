@@ -62,7 +62,20 @@ primitives = [
     ("bool?", unaryOp boolp),
     ("list?", unaryOp listp),
     ("symbol->string", unaryOp symbol2string),
-    ("string->symbol", unaryOp string2symbol)]
+    ("string->symbol", unaryOp string2symbol),
+    ("=", numBoolBinop (==)),
+    ("<", numBoolBinop (<)),
+    (">", numBoolBinop (>)),
+    ("/=", numBoolBinop (/=)),
+    (">=", numBoolBinop (>=)),
+    ("<=", numBoolBinop (<=)),
+    ("&&", boolBoolBinop (&&)),
+    ("||", boolBoolBinop (||)),
+    ("string=?", strBoolBinop (==)),
+    ("string<?", strBoolBinop (<)),
+    ("string>?", strBoolBinop (>)),
+    ("string<=?", strBoolBinop (<=)),
+    ("string>=?", strBoolBinop (>=))]
 
 
 apply :: String -> [LispVal] -> ThrowsError LispVal
