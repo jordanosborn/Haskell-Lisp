@@ -151,7 +151,7 @@ parseUnQuote = do
 parseVector :: Parser LispVal
 parseVector = do
     arrayValues <- sepBy parseExpr spaces1
-    return $ Vector (listArray (0, (length arrayValues - 1)) arrayValues)
+    return $ Vector (listArray (0, length arrayValues - 1) arrayValues)
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom

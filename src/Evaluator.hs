@@ -6,6 +6,7 @@ import Control.Monad.Except
 import Primitives
 import Data.IORef
 import Data.Maybe
+import Control.Applicative
 
 
 nullEnv :: IO Env
@@ -49,10 +50,30 @@ bindVars envRef bindings = readIORef envRef >>= extendEnv bindings >>= newIORef
             return (var, ref)
 
 
-apply :: String -> [LispVal] -> ThrowsError LispVal
-apply func args = maybe (throwError $ NotFunction
-    "Unrecognised primitive function args" func)
-    ($ args) (lookup func primitives)
+apply :: LispVal -> [LispVal] -> IOThrowsError LispVal
+apply (PrimitiveFunc func) args = liftThrows $ func args
+apply (Func params varargs body closure) args =
+    if num params /= num args && isNothing varargs
+        then throwError $ NumArgs (num params) args
+        else liftIO (bindVars closure $ zip params args) >>= bindVarArgs varargs >>= evalBody
+            where
+                remainingArgs = drop (length params) args
+                num = toInteger . length
+                evalBody env = last Control.Applicative.<$> mapM (eval env) body
+                bindVarArgs arg env = case arg of
+                    Just argName -> liftIO $ bindVars env [(argName, List remainingArgs)]
+                    Nothing -> return env
+
+primitiveBindings :: IO Env
+primitiveBindings = nullEnv >>= flip bindVars (map makePrimitiveFunc primitives)
+                    where makePrimitiveFunc (var, func) = (var, PrimitiveFunc func)
+
+makeFunc varargs env params body = return $ Func (map showVal params) varargs body env
+makeNormalFunc :: Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
+makeNormalFunc = makeFunc Nothing
+makeVarArgs :: LispVal -> Env -> [LispVal] -> [LispVal] -> IOThrowsError LispVal
+makeVarArgs = makeFunc . Just . showVal
+
 
 cond :: Env -> [LispVal] -> IOThrowsError LispVal
 cond env [List [Atom "else", value]] = eval env value
@@ -74,6 +95,16 @@ eval env (List [Atom "quote", val]) = return val
 eval env (List (Atom "cond" : alts)) = cond env alts
 eval env (List [Atom "set!", Atom var, form]) = eval env form >>= setVar env var
 eval env (List [Atom "define", Atom var, form]) = eval env form >>= defineVar env var
+eval env (List (Atom "define" : List (Atom var : params) : body)) =
+    makeNormalFunc env params body >>= defineVar env var
+eval env (List (Atom "define" : DottedList (Atom var : params) varargs : body)) =
+    makeVarArgs varargs env params body >>= defineVar env var
+eval env (List (Atom "lambda" : List params : body)) =
+    makeNormalFunc env params body
+eval env (List (Atom "lambda" : DottedList params varargs : body)) =
+    makeVarArgs varargs env params body
+eval env (List (Atom "lambda" : varargs@(Atom _) : body)) =
+    makeVarArgs varargs env [] body
 eval env form@(List (Atom "case" : key : clauses)) =
     if null clauses then throwError $ BadSpecialForm "no true clause in case expression: " form
     else case head clauses of
@@ -91,5 +122,8 @@ eval env (List [Atom "if", pred, conseq, alt]) = do
         Bool False -> eval env alt
         Bool True -> eval env conseq
         _ -> throwError $ TypeMismatch "bool" pred
-eval env (List (Atom func : args)) = mapM (eval env) args >>= liftThrows . apply func
+eval env (List (function : args)) = do
+    func <- eval env function
+    argVals <- mapM (eval env) args
+    apply func argVals
 eval env badForm = throwError $ BadSpecialForm "Unrecognised special form" badForm
