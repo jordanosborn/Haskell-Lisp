@@ -8,8 +8,6 @@ import Data.IORef
 import Data.Maybe
 
 
-type Env = IORef [(String, IORef LispVal)]
-
 nullEnv :: IO Env
 nullEnv = newIORef []
 
