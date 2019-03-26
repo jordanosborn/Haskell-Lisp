@@ -22,7 +22,7 @@ executable haskell
         Evaluator
         Errors
     build-depends:
-        base >=4.11 && <4.12,
+        base -any,
         parsec -any,
         array -any,
         mtl -any
