@@ -17,7 +17,6 @@ executable haskell
         Utilities.Number
         Utilities.Types
         Utilities.Tools
-        Primitives
         Parser
         Evaluator
         Errors
