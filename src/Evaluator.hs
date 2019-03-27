@@ -120,10 +120,10 @@ data Unpacker = forall a. Eq a => AnyUnpacker (LispVal -> ThrowsError a)
 unpackEquals :: LispVal -> LispVal -> Unpacker -> ThrowsError Bool
 unpackEquals arg1 arg2 (AnyUnpacker unpacker) =
     do
-        unpacked1 <- unpacker arg1
-        unpacked2 <- unpacker arg2
-        return $ unpacked1 == unpacked2
-    `catchError` const (return False)
+            unpacked1 <- unpacker arg1
+            unpacked2 <- unpacker arg2
+            return $ unpacked1 == unpacked2
+        `catchError` const (return False)
 
 equal :: [LispVal] -> ThrowsError LispVal
 equal value = case value of
@@ -131,7 +131,7 @@ equal value = case value of
     [DottedList xs x, DottedList ys y] ->
         equal [List $ xs ++ [x], List $ ys ++ [y]]
     [arg1, arg2] -> do
-        primitiveEquals <- fmap or $ mapM
+        primitiveEquals <- or <$> mapM
             (unpackEquals arg1 arg2)
             [ AnyUnpacker unpackNum
             , AnyUnpacker unpackStr
