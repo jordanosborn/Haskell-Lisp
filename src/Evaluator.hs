@@ -174,7 +174,8 @@ apply (Func params varargs body closure) args =
     bindVarArgs arg env = case arg of
         Just argName -> liftIO $ bindVars env [(argName, List remainingArgs)]
         Nothing      -> return env
-
+apply _ _ =
+    throwError $ Default "Couldn't interpret statement"
 
 applyProc :: [LispVal] -> IOThrowsError LispVal
 applyProc [func, List args] = apply func args

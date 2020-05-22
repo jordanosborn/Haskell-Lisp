@@ -12,7 +12,8 @@ showError (NumArgs expected found) = "Expected " ++ show expected
 showError (TypeMismatch expected found) = "Invalid type: expected " ++ expected
     ++ ", found " ++ show found
 showError (Parser parseErr) = "Parse error at " ++ show parseErr
-
+showError (Default defaultErr) = "Unknown error: " ++ defaultErr
+ 
 instance Show LispError where show = showError
 
 trapError action = catchError action (return . show)

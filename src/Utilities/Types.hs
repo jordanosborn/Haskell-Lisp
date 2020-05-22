@@ -36,7 +36,7 @@ data LispVal = Atom String
         body :: [LispVal], closure :: Env}
     | IOFunc ([LispVal] -> IOThrowsError LispVal)
     | Port IO.Handle
-
+    | None
 
 showVal :: LispVal -> String
 showVal val = case val of
